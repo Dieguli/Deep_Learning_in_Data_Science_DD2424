@@ -1,0 +1,59 @@
+close all;
+clear all;
+addpath cifar-10-matlab/cifar-10-batches-mat; 
+% Dimensions: X(dxN), Y(KxN), W(Kxd), b(Kx1), P(KxN), y(1xN) with K = 10, N = 1000
+% and d = 3072
+% 1) Read in and store the training, validation and test data.
+[trainX, trainY, trainy] = LoadBatch('data_batch_1.mat');
+[valX, valY, valy] = LoadBatch('data_batch_2.mat');
+[testX, testY, testy] = LoadBatch('test_batch.mat');
+% 2)Initalization of the parameters W and b.
+% Initialize each entry to have Gaussian random values with zero mean and standard deviation .01
+mu = 0;
+sigma = 0.01;
+K = size(trainY, 1);
+d = size(trainX, 1);
+W = mu + randn(K, d)*sigma;
+b = mu + randn(K, 1)*sigma;
+lambda = 0;
+%  Check the function runs on a subset of the training data given a random 
+%initialization of the network’s parameters: 
+P = EvaluateClassifier(trainX(:, 1 : 100), W, b);
+% perform the mini-batch gradient descent algorithm
+GDparams.n_batch = 100;
+GDparams.eta = 0.01;
+GDparams.n_epochs = 40;
+costTraining = zeros(1, GDparams.n_epochs);
+costValidation = zeros(1, GDparams.n_epochs);
+for i = 1 : GDparams.n_epochs
+    costTraining(i) = ComputeCost(trainX, trainY, W, b, lambda);
+    costValidation(i) = ComputeCost(valX, valY, W, b, lambda);
+    [W, b] = MiniBatchGD(trainX, trainY, GDparams, W, b, lambda);
+end
+% print accuracy of the network
+accTraining = ComputeAccuracy(trainX, trainy, W, b);
+disp(['Accuracy for training data:' num2str(accTraining*100) '%'])
+accTest= ComputeAccuracy(testX, testy, W, b);
+disp(['Accuracy for test data:' num2str(accTest*100) '%'])
+
+% plot cost score
+figure()
+plot(1 : GDparams.n_epochs, costTraining, 'r')
+hold on
+plot(1 : GDparams.n_epochs, costValidation, 'b')
+hold off
+xlabel('epoch');
+ylabel('loss');
+legend('training loss', 'validation loss');
+
+% visualize weight matrix as class template images
+for i = 1 : K
+im = reshape(W(i, :), 32, 32, 3);
+s_im{i} = (im - min(im(:))) / (max(im(:)) - min(im(:)));
+s_im{i} = permute(s_im{i}, [2, 1, 3]);
+end
+figure()
+montage(s_im, 'size', [1, K])
+
+
+
